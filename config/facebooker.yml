@@ -1,0 +1,36 @@
+# The api key, secret key, and canvas page name are required to get started
+# Tunnel configuration is only needed if you are going to use the facebooker:tunnel Rake tasks
+# Your callback url in Facebook should be set to http://public_host:public_port
+
+development:
+  api_key: 2b5d1959da127724463d7cf8a03275a6
+  secret_key: b2b9734edc7da5c56221bdedd997139a
+  canvas_page_name: rubyfoot_dev
+  callback_url: http://staging.travelerstable.com:8888
+  tunnel:
+    public_host_username: 
+    public_host: 
+    public_port: 4007
+    local_port: 3000
+
+test:
+  api_key: 2b5d1959da127724463d7cf8a03275a6
+  secret_key: b2b9734edc7da5c56221bdedd997139a
+  canvas_page_name: rubyfoot_test
+  callback_url: localhost:3000
+  tunnel:
+    public_host_username: 
+    public_host: 
+    public_port: 4007
+    local_port: 3000
+
+production:
+  api_key: 921628d9d70f5e0b5887936802abe9e6
+  secret_key: 77e6aae4bc928d4c14c6d67a443ce96c
+  canvas_page_name: ruby_footprints
+  callback_url: http://rfootprints.shacknet.nu 
+  tunnel:
+    public_host_username: 
+    public_host: 
+    public_port: 4007
+    local_port: 3000

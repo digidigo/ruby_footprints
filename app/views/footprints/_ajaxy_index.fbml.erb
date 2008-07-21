@@ -1,0 +1,49 @@
+<div id="ajax_messages" style="overflow:hidden;height:0px;">
+</div>
+<script language="JavaScript" type="text/javascript"> 
+ 
+  function submitAjax(evt){
+    evt.preventDefault();
+    url = '<%=  url_for(:action => "ajax_create", :canvas => false, :only_path => false,
+    request_forgery_protection_token.to_s => h(form_authenticity_token()) ) %>';
+    form = document.getElementById('step_on_form');
+    submitForm( form , url,'ajax_messages'); 
+    return false;
+  }
+
+  // Unobtrusively add sumbit ajax to the form
+  document.getElementById('step_on_button').addEventListener('click',submitAjax);
+
+  //function addAjaxLinks(){
+  // Each(document.getElementsByTagName('a'), function(link){ 
+   //  if(link.getClassName() == 'step_on_link')
+    //   {
+     //    link.addEventListener('click', stepAjax);
+     //  }
+  // });
+ // }
+ 
+      // function stepOn(uid, name, url){ // Build the AJAX object to request the dialog contents. 
+  //  try {
+       
+    ///  dlg = new Dialog(); 
+ 
+//      dlg.showChoice('Confirm Request', "Are you sure you want to do this?" , 'Yes', 'No'); 
+ //     dlg.onconfirm = function() { 
+   //     var ajax = new Ajax();
+   //     ajax.responseType = Ajax.FBML; 
+   //     ajax.ondone = function(data) { 
+   //       updateDiv('ajax_messages', data);
+   //       obscure(highlight(revealDiv('ajax_messages').checkpoint()).checkpoint()).go();
+   //     }; 
+   //     ajax.post(url, "friend_to_step_on=" + uid); 
+   //   } 
+  //  } 
+  //  catch(err) {
+  //    new Dialog().showMessage("Error","Something weird happened. ");
+  //  }
+            
+ //   return false;
+  //} 
+       
+</script>

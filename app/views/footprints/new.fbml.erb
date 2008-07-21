@@ -1,0 +1,11 @@
+
+
+<h3> Are you sure you want to step on <%= fb_name(@user_to_step_on )%>?  
+
+<%= button_to("Step", footprints_path(:id => @user_to_step_on)) %> </h3>
+
+  <hr>
+<h3>  These are <%= fb_name(@user_to_step_on, :possessive => true ) %> footprints. </h3>
+<% for footprint in @user_to_step_on_as_target_footprints.select(&:attacker) %>
+  <%= render :partial => "footprint" , :locals => {:footprint => footprint} %>
+<% end %>

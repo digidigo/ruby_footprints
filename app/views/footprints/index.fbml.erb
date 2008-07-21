@@ -1,0 +1,15 @@
+
+
+<%= content_tag(:h3, "You haven't stepped on anyone. Get On It!") if(@current_user_as_source_footprints.blank?)%>
+
+<% form_tag( new_footprint_path, :id => "step_on_form" ) do -%>
+ Step on a friend: <%= fb_friend_selector( :idname => "friend_to_step_on")%>  <%= submit_tag("Step", :id => "step_on_button") %>
+<% end -%>
+<hr>
+  
+<%= render :partial => 'ajaxy_index' if(ajax_on?) %>
+
+<h3>  These are <%= fb_name(current_user.uid, :possessive => true ) %> footprints. </h3>
+<% for footprint in @current_user_as_target_footprints.select(&:attacker) %>
+ <%= render :partial => "footprint" , :locals => {:footprint => footprint} %>
+<% end %>

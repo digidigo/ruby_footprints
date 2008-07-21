@@ -1,0 +1,30 @@
+<%= stylesheet_link_tag("site")%>
+<%= javascript_include_tag('application','facebooker')  %>
+
+<div id="ajax_control">
+  <%= render :partial => "/admin/ajaxy_control" %>
+</div>
+<div id="content">
+  
+<!-- http://wiki.developers.facebook.com/index.php/Fb:name -->
+<h2> Hi <%= fb_name(@facebook_session.user.id, :firstnameonly => true, :useyou => false) %>! </h2> 
+
+<%= facebook_messages %>
+
+    <% fb_tabs do %>  
+	   <%= fb_tab_item("Step On People", footprints_url, :selected => (tab_selected?(:footprints, :index)) )%>  
+           <%= fb_tab_item("Friend's Footprints", friend_footprints_url, :selected => (tab_selected?(:footprints, :friends)) )%>  
+           <%= fb_tab_item("Recent Footprints", recent_footprints_url, :selected => (tab_selected?(:footprints, :recent)) )%>  
+    <% end %>  
+
+<div id="current_content">
+  
+<%= yield %>
+
+</div>
+
+<div id="footer">
+   <%= link_to("Invite Friends to Ruby Footprints", invite_friends_url()) %>
+</div>
+
+</div>

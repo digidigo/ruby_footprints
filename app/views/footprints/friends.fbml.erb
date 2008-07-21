@@ -1,0 +1,18 @@
+<% footprints = @friends.map(&:footprints).collect{|footprints| footprints[0..4]}.flatten %>
+<% if(params[:from_invite_page] && (friend_ids = session[:invited_friends])) %>
+  <div id="invited_friends">
+    <h2> Friends you've invited </h2>
+        <% friend_ids.each do |friend_id| %>
+            <%= fb_name(friend_id) %>
+        <% end %> 
+    </div>
+   
+<% end %>
+
+
+<% for footprint in footprints %>
+       <%= render :partial => "footprint", :locals => {:footprint => footprint } %>
+<% end %>
+
+ <%= fb_error("Your friends don't have any Ruby Footprints.  Go Step on them. ") if footprints.blank? %>
+

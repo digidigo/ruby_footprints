@@ -1,0 +1,14 @@
+<% content_for("invite_user") do %>
+	Check out Ruby Footprints.  
+	It is an example Facebook app built with Ruby. 
+	<%= fb_req_choice("Check it out!", friend_footprints_url()) %>
+<% end %>                      
+
+<% fb_request_form("Ruby Footprints",
+					"invite_user",
+					 invited_friends_url()) do %>
+	<%= fb_multi_friend_selector("Invite your friends to check out Ruby Footprints.", 
+			:showborder => true, 
+			:exclude_ids => current_user.friends_with_this_app.map(&:id).join(","))   %>
+<% end %>             
+

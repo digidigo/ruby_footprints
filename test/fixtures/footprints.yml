@@ -1,0 +1,9 @@
+# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
+
+one:
+  attacker_id: 1
+  victim_id: 1
+
+two:
+  attacker_id: 1
+  victim_id: 1

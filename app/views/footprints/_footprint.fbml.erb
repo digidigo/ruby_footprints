@@ -1,0 +1,11 @@
+<div class="footprint">
+  <%= user_thumb(footprint.attacker.uid) %> <div class="footprint_item"> stepped on </div> <%= user_thumb(footprint.victim.uid) %> <div class="footprint_item"> <%= time_ago_in_words(footprint.created_at)%> ago. </div>
+      <% fb_if_is_user(footprint.attacker.uid) do %>
+      	&nbsp;		    
+      <% fb_else do %>
+        <br />
+       	<%= link_to("Step on #{fb_name(footprint.attacker.uid)}", new_footprint_path(:friend_to_step_on => footprint.attacker.uid ), :class => "step_link") %>		 
+      <% end %>
+      <% end %>        
+   </div>
+<br style="clear:both"/>

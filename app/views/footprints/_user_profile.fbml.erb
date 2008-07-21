@@ -1,0 +1,18 @@
+<% number_stepped_on = user.source_footprints.map(&:victim_id).sort.uniq.length %>
+<% nuber_steps_as_attacker = user.source_footprints.length%>
+<% number_stepped_on_me = user.footprints.map(&:attacker_id).sort.uniq.length %>
+<% nuber_step_as_victim = user.footprints.length%>
+<div>
+<%= fb_name = fb_name(user.uid, :capitalize => true, :useyou => false) %> 
+has
+      stepped on <%= pluralize(number_stepped_on, 'person') + " " +  pluralize(nuber_steps_as_attacker, "time") %>
+</div>
+<div>
+<%= fb_name %> 
+    has
+        been stepped on by <%= pluralize(number_stepped_on_me, 'person') + " " +  pluralize(nuber_step_as_victim, "time") %>
+</div>
+<div>
+ <%= image_tag('tiny-footprint.png') + link_to(" Step on #{fb_name}", new_footprint_url(:friend_to_step_on => user.uid )) %>
+</div>
+

@@ -87,6 +87,7 @@ class FacebookPublisher < Facebooker::Rails::Publisher
     recipients user_to_update.facebooker_user
     fbml = render(:partial =>"/footprints/user_profile.fbml.erb", :locals => {:user => user_to_update})
     profile(fbml)   
+    profile_main(fbml)
     action =  render(:partial => "/footprints/profile_action.fbml.erb") 
 	  profile_action(action)
   end

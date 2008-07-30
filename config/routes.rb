@@ -45,7 +45,7 @@ ActionController::Routing::Routes.draw do |map|
   
   map.invite_friends( "invite/friends", :controller => "admin", :action => "invite_friends")
   map.invited_friends( "invited/friends", :controller => "admin", :action => "invited_friends")
-
+  map.publish_self("publish_self", :controller => "admin", :action => "publish_self" )
   # Install the default routes as the lowest priority.
   map.connect ':controller/:action/:id'
   map.connect ':controller/:action/:id.:format'

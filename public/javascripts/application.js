@@ -31,7 +31,7 @@
   //Ajax form submit with a confirmation dialog
   // http://wiki.developers.facebook.com/index.php/FBJS/Examples/Ajax
   
-  //BEGIN ajax_submit_form
+   // BEGIN ajax_submit_form
    function submitForm(varForm, url, div_id){ 
     try {
       //Grab the friend ID from the FORM
@@ -59,7 +59,7 @@
     }            
     return false;
   } 
-  //END ajax_submit_form
+  // END ajax_submit_form
   
  
   

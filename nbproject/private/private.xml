@@ -4,19 +4,19 @@
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/1">
         <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/controllers/admin_controller.rb</file>
         <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/controllers/application.rb</file>
-        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/controllers/footprints_controller.rb</file>
         <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/models/facebook_publisher.rb</file>
         <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/models/footprint_observer.rb</file>
-        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/views/footprints/_ajaxy_index.fbml.erb</file>
-        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/views/footprints/new.fbml.erb</file>
-        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/views/footprints/web.html.erb</file>
+        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/views/admin/_publish_self_form.erb</file>
+        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/views/footprints/_user_profile.fbml.erb</file>
         <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/app/views/layouts/application.fbml.erb</file>
+        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/config/database.yml</file>
+        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/config/facebooker.yml</file>
         <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/config/routes.rb</file>
-        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/public/images/tiny-footprint.png</file>
-        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/public/javascripts/application.js</file>
-        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/vendor/plugins/facebooker/javascripts/facebooker.js</file>
+        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/vendor/plugins/facebooker/init.rb</file>
         <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/vendor/plugins/facebooker/lib/facebooker/adapters/facebook_adapter.rb</file>
-        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/vendor/plugins/facebooker/lib/facebooker/rails/helpers.rb</file>
+        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/vendor/plugins/facebooker/lib/facebooker/models/user.rb</file>
+        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/vendor/plugins/facebooker/lib/facebooker/rails/profile_publisher_extensions.rb</file>
         <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/vendor/plugins/facebooker/lib/facebooker/rails/publisher.rb</file>
+        <file>file:/Users/dclements/workspace/projects/book/facebook/code/ruby_footprints/vendor/plugins/facebooker/lib/facebooker/session.rb</file>
     </open-files>
 </project-private>

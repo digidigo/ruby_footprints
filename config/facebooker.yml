@@ -4,7 +4,7 @@
 
 development:
   api_key: 2b5d1959da127724463d7cf8a03275a6
-  secret_key: b2b9734edc7da5c56221bdedd997139a
+  secret_key: b2bSECRET
   canvas_page_name: rubyfoot_dev
   callback_url: http://staging.travelerstable.com:8888
   tunnel:
@@ -15,7 +15,7 @@ development:
 
 test:
   api_key: 2b5d1959da127724463d7cf8a03275a6
-  secret_key: b2b9734edc7da5c56221bdedd997139a
+  secret_key: b2b9734eSECRET
   canvas_page_name: rubyfoot_test
   callback_url: localhost:3000
   tunnel:
@@ -26,7 +26,7 @@ test:
 
 production:
   api_key: 921628d9d70f5e0b5887936802abe9e6
-  secret_key: 77e6aae4bc928d4c14c6d67a443ce96c
+  secret_key: 77e6aae4bc928SECRET
   canvas_page_name: ruby_footprints
   callback_url: http://rfootprints.shacknet.nu 
   tunnel:

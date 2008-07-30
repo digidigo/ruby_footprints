@@ -13,7 +13,8 @@ class ApplicationController < ActionController::Base
   after_filter :publish_story_to_user
   # BEGIN setup_db_facebook_user
   def setup_db_facebook_user
-    # Grab the facebook user if we have one and store it in the session
+    # Grab the facebook user if we have one 
+    # and store it in the session
     unless( @fb_user || facebook_params.empty? )
 
       user_id =  facebook_params["user"]

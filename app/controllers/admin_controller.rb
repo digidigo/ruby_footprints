@@ -23,9 +23,10 @@ class AdminController < ApplicationController
    # BEGIN publish_self
    def publish_self
       user = FacebookUser.find_by_uid(params[:fb_sig_profile_user])
-      FacebookPublisher.register_publish_self unless Facebooker::Rails::Publisher::FacebookTemplate.find_by_template_name("publish_self_item")
+      FacebookPublisher.register_publish_self unless 
+        Facebooker::Rails::Publisher::FacebookTemplate.find_by_template_name("publish_self_item")
       if wants_interface?
-         render_publisher_interface(render_to_string(:partial=>"/footprints/user_profile", :locals => {:user => user}))
+        render_publisher_interface(render_to_string(:partial=>"/footprints/user_profile", :locals => {:user => user}))
       else
          render_publisher_response(FacebookPublisher.create_publish_self(user))
       end

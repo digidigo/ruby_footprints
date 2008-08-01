@@ -5,8 +5,8 @@
 development:
   api_key: 2b5d1959da127724463d7cf8a03275a6
   secret_key: b2bSECRET
-  canvas_page_name: rubyfoot_dev
-  callback_url: http://staging.travelerstable.com:8888
+  canvas_page_name: 
+  callback_url: 
   tunnel:
     public_host_username: 
     public_host: 

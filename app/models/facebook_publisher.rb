@@ -33,9 +33,11 @@ class FacebookPublisher < Facebooker::Rails::Publisher
   def publish_self(user)
     send_as :user_action
     from(user)
-    data({:general_step_link => link_to("Step", footprints_url),:fbml => (render :partial => "/footprints/user_profile.fbml.erb", :locals => {:user => user})})
+    data({
+      :general_step_link => link_to("Step", footprints_url),
+      :fbml => (render :partial => "/footprints/user_profile.fbml.erb", :locals => {:user => user})
+    })
   end
-
   # END publish_self
 
   # BEGIN notification

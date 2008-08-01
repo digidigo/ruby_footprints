@@ -65,7 +65,7 @@ class ApplicationController < ActionController::Base
     end
     url_hash[:only_path] = true
     url_hash[:canvas] = false
-    url_for(url_hash)
+    url_for(url_hash)[1..-1]
      
   end
   

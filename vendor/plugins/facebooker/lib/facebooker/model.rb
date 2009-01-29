@@ -77,6 +77,18 @@ module Facebooker
           end)
         end
       end      
+
+      def id_is(attribute)
+        class_eval <<-EOS
+        def #{attribute}=(value)
+          @#{attribute} = value.to_i
+        end
+
+        attr_reader #{attribute.inspect}
+        alias :id #{attribute.inspect}
+        alias :id= #{"#{attribute}=".to_sym.inspect}
+        EOS
+      end
     end
     
     ##
@@ -109,7 +121,12 @@ module Facebooker
     def populate_from_hash!(hash)
       unless hash.empty?
         hash.each do |key, value|
-          self.__send__("#{key}=", value)
+          set_attr_method = "#{key}="
+          if respond_to?(set_attr_method)
+            self.__send__(set_attr_method, value) 
+          else
+            Facebooker::Logging.log_info("**Warning**, Attempt to set non-attribute: #{key}",hash)
+          end
         end
         @populated = true
       end      

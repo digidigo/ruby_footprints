@@ -58,22 +58,23 @@ module Facebooker
     
     def self.hashinate(response_element)
       response_element.children.reject{|c| c.kind_of? REXML::Text}.inject({}) do |hash, child|
-        hash[child.name] = if child.children.size == 1 && child.children.first.kind_of?(REXML::Text)
+        # If the node hasn't any child, and is not a list, we want empty strings, not empty hashes,
+        #   except if attributes['nil'] == true
+        hash[child.name] = 
+        if (child.attributes['nil'] == 'true')
+          nil 
+        elsif (child.children.size == 1 && child.children.first.kind_of?(REXML::Text)) || (child.children.size == 0 && child.attributes['list'] != 'true')
           anonymous_field_from(child, hash) || child.text_value
+        elsif child.attributes['list'] == 'true'
+          child.children.reject{|c| c.kind_of? REXML::Text}.map { |subchild| hash_or_value_for(subchild)}    
         else
-          if child.attributes['list'] == 'true'
-            child.children.reject{|c| c.kind_of? REXML::Text}.map do |subchild| 
-                hash_or_value_for(subchild)
-            end     
-          else
-            child.children.reject{|c| c.kind_of? REXML::Text}.inject({}) do |subhash, subchild|
-              subhash[subchild.name] = hash_or_value_for(subchild)
-              subhash
-            end
+          child.children.reject{|c| c.kind_of? REXML::Text}.inject({}) do |subhash, subchild|
+            subhash[subchild.name] = hash_or_value_for(subchild)
+            subhash
           end
-        end
+        end #if (child.attributes)
         hash
-      end      
+      end #do |hash, child|      
     end
     
     def self.anonymous_field_from(child, hash)
@@ -87,6 +88,12 @@ module Facebooker
   class CreateToken < Parser#:nodoc:
     def self.process(data)
       element('auth_createToken_response', data).text_value
+    end
+  end
+  
+  class RegisterUsers < Parser
+    def self.process(data)
+      array_of_text_values(element("connect_registerUsers_response", data), "connect_registerUsers_response_elt")
     end
   end
 
@@ -114,18 +121,54 @@ module Facebooker
     end
   end
   
+  class UserStandardInfo < Parser#:nodoc:
+    def self.process(data)
+      array_of_hashes(element('users_getStandardInfo_response', data), 'standard_user_info')
+    end
+  end
+  
+  class GetLoggedInUser < Parser#:nodoc:
+    def self.process(data)
+      Integer(element('users_getLoggedInUser_response', data).text_value)
+    end
+  end
+
+  class PagesIsAdmin < Parser#:nodoc:
+    def self.process(data)
+      element('pages_isAdmin_response', data).text_value == '1'
+    end
+  end
+
+  class PagesGetInfo < Parser#:nodoc:
+    def self.process(data)
+      array_of_hashes(element('pages_getInfo_response', data), 'page')
+    end
+  end
+
   class PublishStoryToUser < Parser#:nodoc:
     def self.process(data)
       element('feed_publishStoryToUser_response', data).text_value
     end
   end
-  
+
   class RegisterTemplateBundle < Parser#:nodoc:
     def self.process(data)
       element('feed_registerTemplateBundle_response', data).text_value.to_i
-    end    
+    end
   end
-  
+
+  class GetRegisteredTemplateBundles < Parser
+    def self.process(data)
+      array_of_hashes(element('feed_getRegisteredTemplateBundles_response',data), 'template_bundle')
+    end
+  end
+
+  class DeactivateTemplateBundleByID < Parser#:nodoc:
+    def self.process(data)
+      element('feed_deactivateTemplateBundleByID_response', data).text_value == '1'
+    end
+  end
+
   class PublishUserAction < Parser#:nodoc:
     def self.process(data)
       element('feed_publishUserAction_response', data).children[1].text_value == "1"
@@ -165,15 +208,15 @@ module Facebooker
   class BatchRun < Parser #:nodoc:
     class << self
       def current_batch=(current_batch)
-        @current_batch=current_batch
+        Thread.current[:facebooker_current_batch]=current_batch
       end
       def current_batch
-        @current_batch
+        Thread.current[:facebooker_current_batch]
       end
     end
     def self.process(data)
       array_of_text_values(element('batch_run_response',data),"batch_run_response_elt").each_with_index do |response,i|
-        batch_request=@current_batch[i]
+        batch_request=current_batch[i]
         body=Struct.new(:body).new
         body.body=CGI.unescapeHTML(response)
         begin
@@ -358,8 +401,8 @@ module Facebooker
         memo
       end
     end
-    
-    private
+
+  private
     def self.are_friends?(raw_value)
       if raw_value == '1'
         true
@@ -373,10 +416,28 @@ module Facebooker
   
   class SetStatus < Parser
     def self.process(data)
-      element('users_setStatus_response',data)=='1'
+      element('users_setStatus_response',data).text_value == '1'
+    end
+  end
+  
+  class GetPreference < Parser#:nodoc:
+    def self.process(data)
+      element('data_getUserPreference_response', data).text_value
+    end
+  end
+  
+  class SetPreference < Parser#:nodoc:
+    def self.process(data)
+      element('data_setUserPreference_response', data).text_value
     end
   end
     
+  class UserHasPermission < Parser
+    def self.process(data)
+      element('users_hasAppPermission_response', data).text_value
+    end
+  end  
+
   class Errors < Parser#:nodoc:
     EXCEPTIONS = {
       1 	=> Facebooker::Session::UnknownError,
@@ -422,7 +483,8 @@ module Facebooker
       response_element = element('error_response', data) rescue nil
       if response_element
         hash = hashinate(response_element)
-        raise EXCEPTIONS[Integer(hash['error_code'])].new(hash['error_msg'])
+        exception = EXCEPTIONS[Integer(hash['error_code'])] || StandardError
+        raise exception.new(hash['error_msg'])
       end
     end
   end
@@ -431,8 +493,14 @@ module Facebooker
     PARSERS = {
       'facebook.auth.createToken' => CreateToken,
       'facebook.auth.getSession' => GetSession,
+      'facebook.connect.registerUsers' => RegisterUsers,
       'facebook.users.getInfo' => UserInfo,
+      'facebook.users.getStandardInfo' => UserStandardInfo,
       'facebook.users.setStatus' => SetStatus,
+      'facebook.users.getLoggedInUser' => GetLoggedInUser,
+      'facebook.users.hasAppPermission' => UserHasPermission,
+      'facebook.pages.isAdmin' => PagesIsAdmin,
+      'facebook.pages.getInfo' => PagesGetInfo,
       'facebook.friends.get' => GetFriends,
       'facebook.friends.getLists' => FriendListsGet,
       'facebook.friends.areFriends' => AreFriends,
@@ -441,6 +509,8 @@ module Facebooker
       'facebook.feed.publishActionOfUser' => PublishActionOfUser,
       'facebook.feed.publishTemplatizedAction' => PublishTemplatizedAction,
       'facebook.feed.registerTemplateBundle' => RegisterTemplateBundle,
+      'facebook.feed.deactivateTemplateBundleByID' => DeactivateTemplateBundleByID,
+      'facebook.feed.getRegisteredTemplateBundles' => GetRegisteredTemplateBundles,
       'facebook.feed.publishUserAction' => PublishUserAction,
       'facebook.notifications.get' => NotificationsGet,
       'facebook.notifications.send' => NotificationsSend,
@@ -469,7 +539,9 @@ module Facebooker
       'facebook.groups.get' => GroupsGet,
       'facebook.events.getMembers' => EventMembersGet,
       'facebook.groups.getMembers' => GroupGetMembers,
-      'facebook.notifications.sendEmail' => NotificationsSendEmail
+      'facebook.notifications.sendEmail' => NotificationsSendEmail,
+      'facebook.data.getUserPreference' => GetPreference,
+      'facebook.data.setUserPreference' => SetPreference
     }
   end
 end

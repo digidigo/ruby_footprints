@@ -2,14 +2,11 @@
 # Config parsing needs to happen before files are required.
 facebook_config = "#{RAILS_ROOT}/config/facebooker.yml"
 
-if File.exist?(facebook_config)
-  FACEBOOKER = YAML.load_file(facebook_config)[RAILS_ENV] 
-  ENV['FACEBOOK_API_KEY'] = FACEBOOKER['api_key']
-  ENV['FACEBOOK_SECRET_KEY'] = FACEBOOKER['secret_key']
-  ENV['FACEBOOKER_RELATIVE_URL_ROOT'] = FACEBOOKER['canvas_page_name']
-  ENV['FACEBOOKER_API'] = FACEBOOKER['api']
-  ActionController::Base.asset_host = FACEBOOKER['callback_url'] if(ActionController::Base.asset_host.blank?)
-end
+require 'facebooker'
+FACEBOOKER = Facebooker.load_configuration(facebook_config)
+
+# enable logger before including everything else, in case we ever want to log initialization 
+Facebooker.logger = RAILS_DEFAULT_LOGGER if Object.const_defined? :RAILS_DEFAULT_LOGGER
 
 require 'net/http_multipart_post'
 require 'facebooker/rails/controller'
@@ -19,8 +16,7 @@ require 'facebooker/rails/facebook_asset_path'
 require 'facebooker/rails/facebook_request_fix'
 require 'facebooker/rails/routing'
 require 'facebooker/rails/facebook_pretty_errors' rescue nil
-require 'facebooker/adapters/facebook_adapter'
-require 'facebooker/adapters/bebo_adapter'
+require 'facebooker/rails/facebook_url_helper'
 module ::ActionController
   class Base
     def self.inherited_with_facebooker(subclass)
@@ -43,6 +39,22 @@ class ActionController::Routing::Route
     defaults
   end
   alias_method_chain :recognition_conditions, :facebooker
+end
+
+# When making get requests, Facebook sends fb_sig parameters both in the query string
+# and also in the post body. We want to ignore the query string ones because they are one
+# request out of date
+# We only do thise when there are POST parameters so that IFrame linkage still works
+class ActionController::AbstractRequest
+  def query_parameters_with_facebooker
+    if request_parameters.blank?
+      query_parameters_without_facebooker
+    else
+      (query_parameters_without_facebooker||{}).reject {|key,value| key.to_s =~ /^fb_sig/}
+    end
+  end
+  
+  alias_method_chain :query_parameters, :facebooker
 end
 
 # We turn off route optimization to make named routes use our code for figuring out if they should go to the session

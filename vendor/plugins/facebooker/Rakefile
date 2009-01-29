@@ -8,7 +8,7 @@ require './lib/facebooker.rb'
 
 Hoe.new('facebooker', Facebooker::VERSION::STRING) do |p|
   p.rubyforge_name = 'facebooker'
-  p.author = ['Chad Fowler', 'Patrick Ewing','Mike Mangino','Shane Vitarana']
+  p.author = ['Chad Fowler', 'Patrick Ewing', 'Mike Mangino', 'Shane Vitarana', 'Corey Innis']
   p.email = 'mmangino@elevatedrails.com'
   p.summary = 'Pure, idiomatic Ruby wrapper for the Facebook REST API.'
   p.description = p.paragraphs_of('README.txt', 2..5).join("\n\n")
@@ -34,6 +34,20 @@ namespace :test do
     t.verbose = true
   end
 end
+
+gem_spec_file = 'facebooker.gemspec'
+
+gem_spec = eval(File.read(gem_spec_file)) rescue nil
+
+desc "Generate the gemspec file."
+task :gemspec do
+  require 'erb'
+
+  File.open(gem_spec_file, 'w') do |f|
+    f.write ERB.new(File.read("#{gem_spec_file}.erb")).result(binding)
+  end
+end
+
 # vim: syntax=Ruby
 # 
 # 

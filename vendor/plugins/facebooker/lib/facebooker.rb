@@ -1,41 +1,56 @@
 begin
-  unless ActiveSupport.const_defined?("JSON")
+  unless Object.const_defined?("ActiveSupport") and ActiveSupport.const_defined?("JSON")
     require 'json' 
+    module Facebooker
+      def self.json_decode(str)
+        JSON.parse(str)
+      end
+    end
+  else
+    module Facebooker
+      def self.json_decode(str)
+        ActiveSupport::JSON.decode(str)
+      end
+    end
   end 
 rescue
   require 'json' 
 end
-require 'facebooker/batch_request'
-require 'facebooker/feed'
-require 'facebooker/model'
-require 'facebooker/parser'
-require 'facebooker/service'
-require 'facebooker/server_cache'
-require 'facebooker/data'
-require 'facebooker/admin'
-require 'facebooker/session'
-require 'facebooker/version'
-require 'facebooker/models/location'
-require 'facebooker/models/affiliation'
-require 'facebooker/models/album'
-require 'facebooker/models/education_info'
-require 'facebooker/models/work_info'
-require 'facebooker/models/event'
-require 'facebooker/models/group'
-require 'facebooker/models/notifications'
-require 'facebooker/models/photo'
-require 'facebooker/models/cookie'
-require 'facebooker/models/applicationproperties'
-require 'facebooker/models/tag'
-require 'facebooker/models/user'
-require 'facebooker/models/info_item'
-require 'facebooker/models/info_section'
-require 'facebooker/adapters/facebook_adapter'
-require 'facebooker/adapters/bebo_adapter'
-require 'facebooker/models/friend_list'
+require 'zlib'
+require 'digest/md5'
+
+
 
 module Facebooker
-  class << self
+      
+    class << self
+    
+    def load_configuration(facebooker_yaml_file)
+      if File.exist?(facebooker_yaml_file)
+        if defined? RAILS_ENV
+          facebooker = YAML.load_file(facebooker_yaml_file)[RAILS_ENV] 
+        else
+          facebooker = YAML.load_file(facebooker_yaml_file)           
+        end
+        ENV['FACEBOOK_API_KEY'] = facebooker['api_key']
+        ENV['FACEBOOK_SECRET_KEY'] = facebooker['secret_key']
+        ENV['FACEBOOKER_RELATIVE_URL_ROOT'] = facebooker['canvas_page_name']
+        ENV['FACEBOOKER_API'] = facebooker['api']
+        if facebooker.has_key?('set_asset_host_to_callback_url')
+          Facebooker.set_asset_host_to_callback_url = facebooker['set_asset_host_to_callback_url'] 
+        end
+        Facebooker.timeout = facebooker['timeout']
+        if Object.const_defined?("ActionController")
+          ActionController::Base.asset_host = facebooker['callback_url'] if(ActionController::Base.asset_host.blank?)  && Facebooker.set_asset_host_to_callback_url
+        end
+        @facebooker_configuration = facebooker
+      end
+    end
+    
+    def facebooker_config
+      @facebooker_configuration 
+    end
+    
      def current_adapter=(adapter_class)
       @current_adapter = adapter_class
     end
@@ -61,7 +76,29 @@ module Facebooker
       current_adapter.is_for?(application_container)
     end
     
-   
+    def set_asset_host_to_callback_url=(val)
+      @set_asset_host_to_callback_url=val
+    end
+    
+    def set_asset_host_to_callback_url
+      @set_asset_host_to_callback_url.nil? ? true : @set_asset_host_to_callback_url
+    end
+    
+    def use_curl=(val)
+      @use_curl=val
+    end
+    
+    def use_curl?
+      @use_curl
+    end
+    
+    def timeout=(val)
+      @timeout = val.to_i
+    end
+    
+    def timeout
+      @timeout
+    end
    
     [:api_key,:secret_key, :www_server_base_url,:login_url_base,:install_url_base,:api_rest_path,:api_server_base,:api_server_base_url,:canvas_server_base].each do |delegated_method|
       define_method(delegated_method){ return current_adapter.send(delegated_method)}
@@ -100,3 +137,35 @@ module Facebooker
     end
   end
 end
+
+require 'facebooker/batch_request'
+require 'facebooker/feed'
+require 'facebooker/logging'
+require 'facebooker/model'
+require 'facebooker/parser'
+require 'facebooker/service'
+require 'facebooker/server_cache'
+require 'facebooker/data'
+require 'facebooker/admin'
+require 'facebooker/session'
+require 'facebooker/version'
+require 'facebooker/models/location'
+require 'facebooker/models/affiliation'
+require 'facebooker/models/album'
+require 'facebooker/models/education_info'
+require 'facebooker/models/work_info'
+require 'facebooker/models/event'
+require 'facebooker/models/group'
+require 'facebooker/models/notifications'
+require 'facebooker/models/page'
+require 'facebooker/models/photo'
+require 'facebooker/models/cookie'
+require 'facebooker/models/applicationproperties'
+require 'facebooker/models/tag'
+require 'facebooker/models/user'
+require 'facebooker/models/info_item'
+require 'facebooker/models/info_section'
+require 'facebooker/adapters/adapter_base'
+require 'facebooker/adapters/facebook_adapter'
+require 'facebooker/adapters/bebo_adapter'
+require 'facebooker/models/friend_list'

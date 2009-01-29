@@ -8,10 +8,12 @@ class SessionTest < Test::Unit::TestCase
     ENV['FACEBOOK_SECRET_KEY'] = '7654321'   
     Facebooker.current_adapter = nil 
     @session = Facebooker::Session.create('whatever', 'doesnotmatterintest')   
+    Facebooker.use_curl=false
   end
 
   def teardown
-    flexmock_close
+    Facebooker::Session.configuration_file_path = nil
+    super    
   end
   
   def test_install_url_escapes_optional_next_parameter
@@ -59,6 +61,17 @@ class SessionTest < Test::Unit::TestCase
     session = Facebooker::Session.create(ENV['FACEBOOK_API_KEY'], ENV['FACEBOOK_SECRET_KEY'])
     session.secure_with!("a session key", "123456", Time.now.to_i + 60)
     assert(session.secured?)
+    assert_equal 'a session key', session.session_key
+    assert_equal 123456, session.user.to_i
+  end
+
+  def test_session_can_be_secured_with_existing_values_and_a_nil_uid
+    flexmock(session = Facebooker::Session.create(ENV['FACEBOOK_API_KEY'], ENV['FACEBOOK_SECRET_KEY']))
+    session.should_receive(:post).with('facebook.users.getLoggedInUser', :session_key => 'a session key').returns(321)
+    session.secure_with!("a session key", nil, Time.now.to_i + 60)
+    assert(session.secured?)
+    assert_equal 'a session key', session.session_key
+    assert_equal 321, session.user.to_i
   end
   
   # The Facebook API for this is hideous.  Oh well.
@@ -149,7 +162,7 @@ class SessionTest < Test::Unit::TestCase
   
   def test_can_send_notification_with_object
     @session = Facebooker::Session.create(ENV['FACEBOOK_API_KEY'], ENV['FACEBOOK_SECRET_KEY'])
-    @session.expects(:post).with('facebook.notifications.send',{:to_ids=>"1",:notification=>"a",:type=>"general"},true)
+    @session.expects(:post).with('facebook.notifications.send',{:to_ids=>"1",:notification=>"a",:type=>"user_to_user"},true)
     @session.send(:instance_variable_set,"@uid",3)
     user=flexmock("user")
     user.should_receive(:facebook_id).and_return("1").once
@@ -158,13 +171,13 @@ class SessionTest < Test::Unit::TestCase
   def test_can_send_notification_with_string
     @session = Facebooker::Session.create(ENV['FACEBOOK_API_KEY'], ENV['FACEBOOK_SECRET_KEY'])
     @session.send(:instance_variable_set,"@uid",3)
-    @session.expects(:post).with('facebook.notifications.send',{:to_ids=>"1",:notification=>"a", :type=>"general"},true)
+    @session.expects(:post).with('facebook.notifications.send',{:to_ids=>"1",:notification=>"a", :type=>"user_to_user"},true)
     @session.send_notification(["1"],"a")
   end
   
   def test_can_send_announcement_notification
     @session = Facebooker::Session.create(ENV['FACEBOOK_API_KEY'], ENV['FACEBOOK_SECRET_KEY'])
-    @session.expects(:post).with('facebook.notifications.send',{:to_ids=>"1",:notification=>"a", :type=>"announcement"},false)
+    @session.expects(:post).with('facebook.notifications.send',{:to_ids=>"1",:notification=>"a", :type=>"app_to_user"},false)
     @session.send_notification(["1"],"a")
   end
   
@@ -174,11 +187,24 @@ class SessionTest < Test::Unit::TestCase
     assert_equal 17876842716, @session.register_template_bundle("{*actor*} did something")
   end
   
-  
+  def test_can_register_template_bundle_with_action_links
+    expect_http_posts_with_responses(example_register_template_bundle_return_xml)
+    @session = Facebooker::Session.create(ENV['FACEBOOK_API_KEY'], ENV['FACEBOOK_SECRET_KEY'])
+    assert_equal 17876842716, @session.register_template_bundle("{*actor*} did something",nil,nil,[{:text=>"text",:href=>"href"}])
+  end
   def test_can_publish_user_action
     expect_http_posts_with_responses(publish_user_action_return_xml)
     @session = Facebooker::Session.create(ENV['FACEBOOK_API_KEY'], ENV['FACEBOOK_SECRET_KEY'])
     assert @session.publish_user_action(17876842716,{})
+  end
+  
+  def test_logs_api_calls
+    call_name = 'sample.api.call'
+    params = { :param1 => true, :param2 => 'value' }
+    flexmock(Facebooker::Logging, :Logging).should_receive(:log_fb_api).once.with(
+       call_name, params, Proc)
+    @session = Facebooker::Session.create(ENV['FACEBOOK_API_KEY'], ENV['FACEBOOK_SECRET_KEY'])
+    @session.post(call_name, params)
   end
   
   def test_requests_inside_batch_are_added_to_batch
@@ -218,10 +244,41 @@ class SessionTest < Test::Unit::TestCase
     assert_equal 4,Facebooker::BatchRun.current_batch
   end
   
-  def teardown
-    Facebooker::Session.configuration_file_path = nil
+  def test_can_get_stanard_info
+    expect_http_posts_with_responses(standard_info_xml)
+    result = @session.users_standard([4])
+    assert_equal "Mike Mangino",result.first.name
   end
-  
+
+  def test_can_query_for_pages
+    expect_http_posts_with_responses(example_pages_xml)
+    example_page = Facebooker::Page.new(
+      :page_id => 4846711747,
+      :name => "Kronos Quartet",
+      :website => "http://www.kronosquartet.org",
+      :company_overview => "",
+      :session => @session)
+    pages = @session.pages(:fields => %w[ page_id name website company_overview ])
+
+    assert_equal 1, pages.size
+
+    page = pages.first
+    assert_equal "4846711747", page.page_id
+    assert_equal "Kronos Quartet", page.name
+    assert_equal "http://www.kronosquartet.org", page.website
+    
+    # TODO we really need a way to differentiate between hash/list and text attributes
+    # assert_equal({}, page.company_overview)
+    
+    # sakkaoui : as a fix to the parser, I replace empty text node by "" instead of {}
+    # we have child.attributes['list'] == 'true' that let us know that we have a hash/list.
+    assert_equal("", page.company_overview)
+    
+    genre = page.genre
+    assert_equal false, genre.dance
+    assert_equal true, genre.party
+  end
+    
   private
   
   def example_groups_get_xml
@@ -475,6 +532,24 @@ class SessionTest < Test::Unit::TestCase
     </feed_registerTemplateBundle_response>
     XML
   end
+
+  def example_pages_xml
+    <<-XML
+    <?xml version="1.0" encoding="UTF-8"?>
+    <pages_getInfo_response xmlns="http://api.facebook.com/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://api.facebook.com/1.0/ http://api.facebook.com/1.0/facebook.xsd" list="true">
+      <page>
+        <page_id>4846711747</page_id>
+        <name>Kronos Quartet</name>
+        <website>http://www.kronosquartet.org</website>
+        <company_overview/>
+        <genre>
+          <dance>0</dance>
+          <party>1</party>
+        </genre>
+      </page>
+    </pages_getInfo_response>
+    XML
+  end
   
   def publish_user_action_return_xml
     <<-XML
@@ -485,6 +560,44 @@ class SessionTest < Test::Unit::TestCase
     XML
   end
   
+  def standard_info_xml
+    <<-XML
+    <?xml version="1.0" encoding="UTF-8"?>
+    <?xml version="1.0" encoding="UTF-8"?>
+
+    <users_getStandardInfo_response xmlns="http://api.facebook.com/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://api.facebook.com/1.0/ http://api.facebook.com/1.0/facebook.xsd" list="true">
+      <standard_user_info>
+        <uid>12451752</uid>
+        <name>Mike Mangino</name>
+      </standard_user_info>
+    </users_getStandardInfo_response>
+    XML
+  end
+end
+
+class PostMethodTest < Test::Unit::TestCase
+  
+  def setup
+    Facebooker.use_curl = true
+    Facebooker::Parser.stubs(:parse)
+    @uri = URI.parse("http://api.facebook.com/api")
+    @service = Facebooker::Service.new("a","b","c")
+    @service.stubs("url").returns(@uri)
+  end
+  
+  def teardown
+    Facebooker.use_curl = false
+  end
+  
+  def test_use_curl_makes_post_with_curl
+    @service.expects(:post_form_with_curl).with(@uri,{:method=>"a"})
+    @service.post(:method=>"a")
+  end
+  
+  def test_use_curl_makes_post_file_use_curl_with_multipart
+    @service.expects(:post_form_with_curl).with(@uri,{:method=>"a"},true)
+    @service.post_file(:method=>"a")    
+  end
 end
 
 class CanvasSessionTest < Test::Unit::TestCase

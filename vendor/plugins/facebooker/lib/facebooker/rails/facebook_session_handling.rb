@@ -11,6 +11,17 @@ module ActionController
   end 
 end
 
+module ActionController
+  class RackRequest < AbstractRequest #:nodoc:
+    alias :initialize_aliased_by_facebooker :initialize
+
+    def initialize(cgi, session_options = {})
+      initialize_aliased_by_facebooker(cgi, session_options)
+      @cgi.instance_variable_set("@request_params", request_parameters.merge(query_parameters))
+    end
+  end 
+end
+
 class CGI  
   class Session
     private
@@ -20,7 +31,7 @@ class CGI
       def initialize(request, option={})
         @request = request
         @initialization_options = option
-        option['session_id'] = set_session_id
+        option['session_id'] ||= set_session_id
         initialize_aliased_by_facebooker(request, option)
       end
       

@@ -1,7 +1,6 @@
 require 'facebooker/model'
 require 'facebooker/models/affiliation'
 require 'facebooker/models/work_info'
-
 module Facebooker
   # 
   # Holds attributes and behavior for a Facebook User
@@ -9,10 +8,10 @@ module Facebooker
     include Model
     class Status
       include Model
-      attr_accessor :message, :time
+      attr_accessor :message, :time, :status_id
     end
-    FIELDS = [:status, :political, :pic_small, :name, :quotes, :is_app_user, :tv, :profile_update_time, :meeting_sex, :hs_info, :timezone, :relationship_status, :hometown_location, :about_me, :wall_count, :significant_other_id, :pic_big, :music, :uid, :work_history, :sex, :religion, :notes_count, :activities, :pic_square, :movies, :has_added_app, :education_history, :birthday, :first_name, :meeting_for, :last_name, :interests, :current_location, :pic, :books, :affiliations]
-    attr_accessor :id, :session
+    FIELDS = [:status, :political, :pic_small, :name, :quotes, :is_app_user, :tv, :profile_update_time, :meeting_sex, :hs_info, :timezone, :relationship_status, :hometown_location, :about_me, :wall_count, :significant_other_id, :pic_big, :music, :uid, :work_history, :sex, :religion, :notes_count, :activities, :pic_square, :movies, :has_added_app, :education_history, :birthday, :first_name, :meeting_for, :last_name, :interests, :current_location, :pic, :books, :affiliations, :locale, :profile_url, :proxied_email,:email_hashes]
+    STANDARD_FIELDS = [:uid, :first_name, :last_name, :name, :timezone, :birthday, :sex, :affiliations, :locale, :profile_url]
     populating_attr_accessor *FIELDS
     attr_reader :affiliations
     populating_hash_settable_accessor :current_location, Location
@@ -28,27 +27,35 @@ module Facebooker
     # attribute_hash
     def initialize(*args)
       if (args.first.kind_of?(String) || args.first.kind_of?(Integer)) && args.size==1
-        @id=Integer(args.shift)
+        self.uid = args.shift
         @session = Session.current
       elsif (args.first.kind_of?(String) || args.first.kind_of?(Integer)) && args[1].kind_of?(Session)
-        @id = Integer(args.shift)
+        self.uid = args.shift
         @session = args.shift
       end
       if args.last.kind_of?(Hash)
         populate_from_hash!(args.pop)
-      end      
+      end     
     end
+
+    id_is :uid
+    alias :facebook_id :id
 
     # Returns a user's events, params correspond to API call parameters (except UID):
     # http://wiki.developers.facebook.com/index.php/Events.get
     # E.g:
-    #  @user.events(:start_time => Time.now.to_i, :end_time => 1.month.from_now.to_i)
+    #  @user.events(:start_time => Time.now, :end_time => 1.month.from_now)
     #  # => Returns events betwen now and a month from now
     def events(params={})
-      @events ||= @session.post('facebook.events.get', {:uid => self.id}.merge(params)).map do |event|
+      @events ||= {}
+      [:start_time,:end_time].compact.each do |key|
+        params[key] = params[key].to_i
+      end
+#      puts @events[params.to_s].nil?
+      @events[params.to_s] ||= @session.post('facebook.events.get', {:uid => self.id}.merge(params)).map do |event|
         Event.from_hash(event)
       end
-    end
+    end    
     
     # 
     # Set the list of friends, given an array of User objects.  If the list has been retrieved previously, will not set
@@ -81,7 +88,9 @@ module Facebooker
       
      	#use __blank instead of nil so that this is cached
      	cache_key = flid||"__blank"
-     	@friends_hash[cache_key] ||= @session.post('facebook.friends.get', (flid.nil? ? {} : {:flid => flid})).map do |uid|
+     	options = {:uid=>self.id}
+     	options[:flid] = flid unless flid.nil?
+     	@friends_hash[cache_key] ||= @session.post('facebook.friends.get', options,false).map do |uid|
           User.new(uid, @session)
       end
       @friends_hash[cache_key]
@@ -164,12 +173,39 @@ module Facebooker
       session.get_photos(nil, nil, profile_pic_album_id)
     end
     
-    def upload_photo(multipart_post_file)
-      Photo.from_hash(session.post_file('facebook.photos.upload', {nil => multipart_post_file}))
+    # Upload a photo to the user's profile.
+    #
+    # In your view, create a multipart form that posts directly to your application (not through canvas):
+    #
+    #   <% form_tag photos_url(:canvas => false), :html => {:multipart => true, :promptpermission => 'photo_upload'} do %>
+    #     Photo: <%= file_field_tag 'photo' %>
+    #     Caption: <%= text_area_tag 'caption' %>
+    #     <%= submit_tag 'Upload Photo', :class => 'inputsubmit' %>
+    #   <% end %>
+    # 
+    # And in your controller: 
+    #
+    #   class PhotosController < ApplicationController
+    #     def create
+    #       file = Net::HTTP::MultipartPostFile.new(
+    #         params[:photo].original_filename,
+    #         params[:photo].content_type,
+    #         params[:photo].read
+    #       )
+    #     
+    #       @photo = facebook_session.user.upload_photo(file, :caption => params[:caption])
+    #       redirect_to photos_url(:canvas => true)
+    #     end
+    #   end
+    #
+    # Options correspond to http://wiki.developers.facebook.com/index.php/Photos.upload
+    def upload_photo(multipart_post_file, options = {})
+      Photo.from_hash(session.post_file('facebook.photos.upload',
+        options.merge(nil => multipart_post_file)))
     end
     
     def profile_fbml
-      session.post('facebook.profile.getFBML', :uid => @id)  
+      session.post('facebook.profile.getFBML', :uid => id)  
     end    
     
     ##
@@ -195,12 +231,12 @@ module Facebooker
     end
     
     def set_profile_fbml(profile_fbml, mobile_fbml, profile_action_fbml, profile_main = nil)
-      parameters = {:uid => @id}
+      parameters = {:uid => id}
       parameters[:profile] = profile_fbml if profile_fbml
       parameters[:profile_action] = profile_action_fbml if profile_action_fbml
       parameters[:mobile_profile] = mobile_fbml if mobile_fbml
       parameters[:profile_main] = profile_main if profile_main
-      session.post('facebook.profile.setFBML', parameters)
+      session.post('facebook.profile.setFBML', parameters,false)
     end
     
     ## ** NEW PROFILE DESIGN ***
@@ -209,27 +245,20 @@ module Facebooker
     # Note: using set_profile_info as I feel using user.set_info could be confused with the user.getInfo facebook method.
     #       Also, I feel it fits in line with user.set_profile_fbml.
     def set_profile_info(title, info_fields, format = :text)
-      session.post('facebook.profile.setInfo', :title => title, :uid => @id, 
+      session.post('facebook.profile.setInfo', :title => title, :uid => id, 
         :type => format.to_s == "text" ? 1 : 5, :info_fields => info_fields.to_json)
     end
     
     def get_profile_info
-      session.post('facebook.profile.getInfo', :uid => @id)
+      session.post('facebook.profile.getInfo', :uid => id)
     end
     
     ##
-    # Set the status of the user
-    #
-    # DOES NOT prepend "is" to the message
-    #
-    # requires extended permission. 
+    # This DOES NOT set the status of a user on Facebook
+    # Use the set_status method instead
     def status=(message)
       case message
-      when String
-        session.post('facebook.users.setStatus',:status=>message,:status_includes_verb=>1) do |ret|
-          ret
-        end
-      when Status
+      when String,Status
         @status = message
       when Hash
         @status = Status.from_hash(message)
@@ -237,21 +266,39 @@ module Facebooker
     end
     
     ##
+    # Set the status for a user
+    # DOES NOT prepend "is" to the message
+    #
+    # requires extended permission. 
+    def set_status(message)
+      self.status=message
+      session.post('facebook.users.setStatus',:status=>message,:status_includes_verb=>1) do |ret|
+        ret
+      end
+    end
+    
+    ##
+    # Checks to see if the user has enabled the given extended permission
+    def has_permission?(ext_perm) # ext_perm = email, offline_access, status_update, photo_upload, create_listing, create_event, rsvp_event, sms
+      session.post('facebook.users.hasAppPermission',:ext_perm=>ext_perm) == "1"
+    end    
+    
+    ##
     # Convenience method to send email to the current user
     def send_email(subject, text=nil, fbml=nil)
-      session.send_email([@id], subject, text, fbml)
+      session.send_email([id], subject, text, fbml)
     end
     
     ##
     # Convenience method to set cookie for the current user
     def set_cookie(name, value, expires=nil, path=nil)
-      session.data.set_cookie(@id, name, value, expires, path)
+      session.data.set_cookie(id, name, value, expires, path)
     end
     
     ##
     # Convenience method to get cookies for the current user
     def get_cookies(name=nil)
-      session.data.get_cookies(@id, name)
+      session.data.get_cookies(id, name)
     end
     
     ##
@@ -271,6 +318,41 @@ module Facebooker
     end
     
     
+    # register a user with Facebook
+    # users should be a hast with at least an :email field
+    # you can optionally provide an :account_id field as well
+        
+    def self.register(users)
+      user_map={}
+      users=users.map do |h|
+        returning h.dup do |d|
+          if email=d.delete(:email)
+            hash = hash_email(email)
+            user_map[hash]=h
+            d[:email_hash]=hash
+          end
+        end
+      end
+      Facebooker::Session.create.post("facebook.connect.registerUsers",:accounts=>users.to_json) do |ret|
+        ret.each do |hash|
+          user_map.delete(hash)
+        end
+        unless user_map.empty?
+          e=Facebooker::Session::UserRegistrationFailed.new
+          e.failed_users = user_map.values
+          raise e
+        end
+        ret
+      end
+    end
+    
+    def self.hash_email(email)
+      email = email.downcase.strip
+      crc=Zlib.crc32(email)
+      md5=Digest::MD5.hexdigest(email)
+      "#{crc}_#{md5}"
+    end
+    
     def self.cast_to_facebook_id(object)
       if object.respond_to?(:facebook_id)
         object.facebook_id
@@ -279,17 +361,29 @@ module Facebooker
       end
     end
     
+    def self.user_fields(fields = [])
+      valid_fields(fields)
+    end
+    
+    def self.standard_fields(fields = [])
+      valid_fields(fields,STANDARD_FIELDS)
+    end
+    
     private
     def publish(feed_story_or_action)
       session.post(Facebooker::Feed::METHODS[feed_story_or_action.class.name.split(/::/).last], feed_story_or_action.to_params) == "1" ? true : false
     end
     
-    def collect(fields)
-      FIELDS.reject{|field_name| !fields.empty? && !fields.include?(field_name)}.join(',')
+    def self.valid_fields(fields, allowable=FIELDS)
+      allowable.reject{|field_name| !fields.empty? && !fields.include?(field_name)}.join(',')
+    end
+    
+    def collect(fields, allowable=FIELDS)
+      allowable.reject{|field_name| !fields.empty? && !fields.include?(field_name)}.join(',')
     end
     
     def profile_pic_album_id
-      merge_aid(-3, @id)
+      merge_aid(-3, id)
     end
     
     def merge_aid(aid, uid)
